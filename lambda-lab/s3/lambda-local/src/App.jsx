@@ -4,8 +4,8 @@ import "./App.css"; // Add styling for centering
 
 function App() {
   const [matchString, setMatchString] = useState("");
-  const [name, setName] = useState("");
-  const [imageUrl, setImageUrl] = useState(null);
+  const [limit, setLimit] = useState(1); // New state for the limit
+  const [imageUrlResult, setImageUrlResult] = useState([]); // Store multiple image URLs
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false); // Loading state
 
@@ -15,20 +15,24 @@ function App() {
     setLoading(true); // Start loading
 
     try {
-      // Make a GET request with matchString as a query parameter
+      // Log the parameters we're sending to the API
+      console.log("Requesting with params:", { matchString, limit });
+
+      // Make a GET request with matchString and limit as query parameters
       const response = await axios.get(
         "https://z7fchi7nff.execute-api.us-east-2.amazonaws.com/js-lab-1",
         {
-          params: { matchString }, // Send matchString as query param
+          params: { matchString, limit }, // Send matchString and limit as query params
         }
       );
 
-      const { imageUrl } = response.data; // Extract imageUrl from response
+      // Extract multiple image URLs from response
+      const imageUrls = response.data.imageUrlResult; // Assuming API returns an array of URLs
 
-      setImageUrl(imageUrl); // Update state with the image URL
-      setName(imageUrl.substring(imageUrl.lastIndexOf('/') + 1));
-    } catch {
-      setError("Failed to fetch the image. Please try again.");
+      setImageUrlResult(imageUrls || []); // Update state with the image URLs
+    } catch (err) {
+      console.error("Error fetching images:", err);
+      setError("Failed to fetch the images. Please try again.");
     } finally {
       setLoading(false); // End loading
     }
@@ -41,12 +45,19 @@ function App() {
         <input
           type="text"
           value={matchString}
-          onChange={(e) => {
-            setMatchString(e.target.value);
-          }}
+          onChange={(e) => setMatchString(e.target.value)}
           placeholder="Enter match string"
           required
         />
+        <input
+          type="number"
+          id="limit"
+          value={limit}
+          onChange={(e) => setLimit(Math.max(1, e.target.value))} // Ensure limit is at least 1
+          min="1"
+          max="10"
+        />        
+        <br/>
         <button type="submit" disabled={loading}>
           {loading ? "Loading..." : "Submit"}
         </button>
@@ -54,14 +65,19 @@ function App() {
 
       {error && <p className="error-message">{error}</p>}
 
-      {loading && <p>Loading image...</p>} {/* Show loading text */}
+      {loading && <p>Loading images...</p>} {/* Show loading text */}
 
-      {imageUrl && !loading && (
-        <div className="image-container">
-          <img src={imageUrl} alt="Result" height={200} />
-          <p className="image-name">{name}</p>
-        </div>      
-      )}
+      <div className="image-container">
+        {imageUrlResult.length > 0 && !loading && imageUrlResult.map((imageUrl, index) => {
+          console.log("Rendering image:", imageUrl); // Log each image URL when rendering
+          return (
+            <div key={index} className="image-item">
+              <img src={imageUrl} alt={`Result ${index + 1}`} height={200} />
+              <p className="image-name">{imageUrl.substring(imageUrl.lastIndexOf('/') + 1)}</p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
